@@ -236,14 +236,6 @@ on:
       # 全部用 choice y/n（与本项目其它开关一致；boolean 在 API 重跑会退化成空串）
       # 选 n = 不额外启用该插件；选 y = 编进固件（依赖内核自动带上）
       # =========================================================
-      plugin_passwall:
-        description: 'PassWall 代理（科学上网，含 Xray/sing-box 内核；编译一般）'
-        required: false
-        default: 'n'
-        type: choice
-        options:
-          - 'n'
-          - 'y'
       plugin_openclash:
         description: 'OpenClash（规则订阅体验好；⚠️依赖 Ruby/Rust，首次 +20~40 分钟）'
         required: false
@@ -252,32 +244,8 @@ on:
         options:
           - 'n'
           - 'y'
-      plugin_smartdns:
-        description: 'SmartDNS（DNS 加速/防污染，配合代理好用）'
-        required: false
-        default: 'n'
-        type: choice
-        options:
-          - 'n'
-          - 'y'
-      plugin_mosdns:
-        description: 'MosDNS（DNS 分流，规则灵活）'
-        required: false
-        default: 'n'
-        type: choice
-        options:
-          - 'n'
-          - 'y'
       plugin_tailscale:
         description: 'Tailscale（零配置异地组网/远程回家）'
-        required: false
-        default: 'n'
-        type: choice
-        options:
-          - 'n'
-          - 'y'
-      plugin_easytier:
-        description: 'EasyTier（国产异地组网；Rust 编译较慢）'
         required: false
         default: 'n'
         type: choice
@@ -300,38 +268,6 @@ on:
         options:
           - 'n'
           - 'y'
-      plugin_lucky:
-        description: 'Lucky（DDNS + 端口转发/内网穿透）'
-        required: false
-        default: 'n'
-        type: choice
-        options:
-          - 'n'
-          - 'y'
-      plugin_openlist:
-        description: 'OpenList 网盘挂载（原 AList）'
-        required: false
-        default: 'n'
-        type: choice
-        options:
-          - 'n'
-          - 'y'
-      plugin_watchdog:
-        description: '看门狗（死机/掉线自动重启）'
-        required: false
-        default: 'n'
-        type: choice
-        options:
-          - 'n'
-          - 'y'
-      plugin_taskplan:
-        description: '定时任务（定时重启/开关）'
-        required: false
-        default: 'n'
-        type: choice
-        options:
-          - 'n'
-          - 'y'
       plugin_wol:
         description: '网络唤醒 WOL（网页一键唤醒电脑/NAS）'
         required: false
@@ -340,32 +276,8 @@ on:
         options:
           - 'n'
           - 'y'
-      plugin_poweroff:
-        description: '关机按钮（界面加关机键）'
-        required: false
-        default: 'n'
-        type: choice
-        options:
-          - 'n'
-          - 'y'
-      plugin_oaf:
-        description: '应用过滤 OAF（⚠️含内核模块，高风险，新手不建议）'
-        required: false
-        default: 'n'
-        type: choice
-        options:
-          - 'n'
-          - 'y'
       plugin_argon:
         description: 'Argon 主题设置页（换壁纸/颜色）'
-        required: false
-        default: 'n'
-        type: choice
-        options:
-          - 'n'
-          - 'y'
-      plugin_fluent:
-        description: 'Fluent 主题（Win11 风格）'
         required: false
         default: 'n'
         type: choice
@@ -382,14 +294,6 @@ on:
           - 'y'
       plugin_nano:
         description: 'nano 文本编辑器'
-        required: false
-        default: 'n'
-        type: choice
-        options:
-          - 'n'
-          - 'y'
-      plugin_htop:
-        description: 'htop 进程/资源监控'
         required: false
         default: 'n'
         type: choice
@@ -983,26 +887,14 @@ jobs:
       # =========================================================
       - name: Apply plugin menu
         env:
-          PLUGIN_PASSWALL: ${{ github.event.inputs.plugin_passwall || 'n' }}
           PLUGIN_OPENCLASH: ${{ github.event.inputs.plugin_openclash || 'n' }}
-          PLUGIN_SMARTDNS: ${{ github.event.inputs.plugin_smartdns || 'n' }}
-          PLUGIN_MOSDNS: ${{ github.event.inputs.plugin_mosdns || 'n' }}
           PLUGIN_TAILSCALE: ${{ github.event.inputs.plugin_tailscale || 'n' }}
-          PLUGIN_EASYTIER: ${{ github.event.inputs.plugin_easytier || 'n' }}
           PLUGIN_WIREGUARD: ${{ github.event.inputs.plugin_wireguard || 'n' }}
           PLUGIN_UPNP: ${{ github.event.inputs.plugin_upnp || 'n' }}
-          PLUGIN_LUCKY: ${{ github.event.inputs.plugin_lucky || 'n' }}
-          PLUGIN_OPENLIST: ${{ github.event.inputs.plugin_openlist || 'n' }}
-          PLUGIN_WATCHDOG: ${{ github.event.inputs.plugin_watchdog || 'n' }}
-          PLUGIN_TASKPLAN: ${{ github.event.inputs.plugin_taskplan || 'n' }}
           PLUGIN_WOL: ${{ github.event.inputs.plugin_wol || 'n' }}
-          PLUGIN_POWEROFF: ${{ github.event.inputs.plugin_poweroff || 'n' }}
-          PLUGIN_OAF: ${{ github.event.inputs.plugin_oaf || 'n' }}
           PLUGIN_ARGON: ${{ github.event.inputs.plugin_argon || 'n' }}
-          PLUGIN_FLUENT: ${{ github.event.inputs.plugin_fluent || 'n' }}
           PLUGIN_CURL: ${{ github.event.inputs.plugin_curl || 'n' }}
           PLUGIN_NANO: ${{ github.event.inputs.plugin_nano || 'n' }}
-          PLUGIN_HTOP: ${{ github.event.inputs.plugin_htop || 'n' }}
           PLUGIN_TTYD: ${{ github.event.inputs.plugin_ttyd || 'n' }}
         run: |
           S="$GITHUB_WORKSPACE/scripts/apply-plugins-menu.sh"
