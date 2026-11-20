@@ -666,6 +666,30 @@ jobs:
             exit 1
           fi
 
+          # [DEFUSE] 拆雷：SoC 通用 config（an7581/an7583）在 11-09 被改成"全家桶"，
+          # 默认 =y 塞了 16 个第三方插件。其中多项是原版从未验证过的高风险项
+          # （OAF 内核模块缺失 / openclash 拖 Ruby / tailscale 文件冲突 / easytier Rust）。
+          # 定制版只要 10 项插件，这里把"全家桶里用户没要的"全部显式关闭，
+          # 从根源避免被这些未验证插件拖垮编译。只关 =y 行，不动其它配置。
+          echo "--- [DEFUSE] 关闭全家桶里未定制的高风险插件 ---"
+          # ⚠ 注意：sing-box 不能关！它是 Momo 的内核依赖（momo Makefile 写死 +sing-box）。
+          #   xray-core 只在 passwall 用，关 passwall 时一并关；sing-box 保留给 momo。
+          for p in \
+            luci-app-passwall luci-app-passwall2 xray-core \
+            luci-app-openclash \
+            luci-app-poweroffdevice \
+            luci-app-lucky luci-app-openlist2 \
+            luci-app-watchdog luci-app-taskplan \
+            luci-app-oaf appfilter kmod-oaf \
+            luci-app-mosdns luci-app-smartdns \
+            luci-app-easytier easytier \
+            luci-app-argon-config; do
+            # 删掉原来的 =y 行（含行尾注释），改成 is not set
+            sed -i "/^CONFIG_PACKAGE_${p}=y/d" .config
+            echo "CONFIG_PACKAGE_${p} is not set" >> .config
+          done
+          echo "✅ [DEFUSE] 已关闭未定制插件（保留 momo/tailscale/wireguard/upnp/wol/fluent/curl/nano/ttyd/rtp2httpd）"
+
           # [CUSTOM-PLUGINS] 追加定制插件开关片段（10 项），不改动原版机型 config
           if [ -e "$GITHUB_WORKSPACE/configs/plugins-extra.config" ]; then
             cat "$GITHUB_WORKSPACE/configs/plugins-extra.config" >> .config
