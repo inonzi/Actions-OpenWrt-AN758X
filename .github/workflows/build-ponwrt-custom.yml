@@ -72,6 +72,7 @@ on:
         default: 'fiberhome_an4475-g2'
         type: choice
         options:
+          - bundle-an7581-4
           - fiberhome_hg5585f-cu
           - fiberhome_hg5585f-ct
           - fiberhome_hg5382a
@@ -217,7 +218,12 @@ jobs:
             echo "::warning::AN4475-G2 的板级支持在 qwe-qaq/ponwrt（source=fork），当前 ${SOURCE} 尚无该 profile；请把 source 选为 fork"
           fi
 
-          if [ "$PROFILE" != "all" ]; then
+          # [BUNDLE-4] 4 机型批量：固定 an7581，用 SoC 通用配置，编译期展开设备列表
+          if [ "$PROFILE" = "bundle-an7581-4" ]; then
+            SOC="an7581"
+          fi
+
+          if [ "$PROFILE" != "all" ] && [ "$PROFILE" != "bundle-an7581-4" ]; then
             case "$PROFILE" in
               nokia_xg-040g-mf*) SOC="an7583" ;;
               *)                  SOC="an7581" ;;
@@ -230,8 +236,8 @@ jobs:
           # DEVICE_NAME 同时决定 artifact 名 / Release tag / 旧 tag 清理三处；
           # 末尾带 host 模式，source 与 prebuilt 并行时产物不互相覆盖。
           echo "DEVICE_NAME=ponwrt-${SOC}-${PROFILE}-${HOST_MODE}" >> "$GITHUB_ENV"
-          # profile=all 用 SoC 通用配置
-          if [ "$PROFILE" = "all" ]; then
+          # profile=all / bundle 用 SoC 通用配置
+          if [ "$PROFILE" = "all" ] || [ "$PROFILE" = "bundle-an7581-4" ]; then
             echo "CONFIG_FILE=configs/${SOC}.config" >> "$GITHUB_ENV"
           else
             echo "CONFIG_FILE=configs/${PROFILE}.config" >> "$GITHUB_ENV"
@@ -616,6 +622,17 @@ jobs:
           chmod +x "$GITHUB_WORKSPACE/$DIY_P1_SH"
           "$GITHUB_WORKSPACE/$DIY_P1_SH"
 
+          # [FIX tailscale] asvow/luci-app-tailscale 前端自带 config/init/hotplug，
+          # 与 feeds 本体 tailscale 提供同名文件，apk 安装报 "trying to overwrite" 冲突。
+          # 删掉前端这几份，配置与启动脚本用 feeds 本体的，LuCI 界面照常可用。
+          TS="package/custom/luci-app-tailscale"
+          if [ -d "$TS" ]; then
+            rm -f "$TS/root/etc/config/tailscale" \
+                  "$TS/root/etc/init.d/tailscale" \
+                  "$TS/root/etc/hotplug.d/iface/40-tailscale"
+            echo "✅ 已移除 tailscale 前端与本体冲突的文件（保留纯 LuCI 界面）"
+          fi
+
       # 摘掉 cargo 的 --frozen/--offline：dl/cargo 缓存只增不减，
       # 上游加新依赖时缓存里没有，不留联网补救会直接编挂。--locked 保留。
       - name: Relax cargo offline flags
@@ -664,6 +681,17 @@ jobs:
 
           if [ "${PROFILE}" = "all" ]; then
             echo "全机型编译，不做裁剪"
+          elif [ "${PROFILE}" = "bundle-an7581-4" ]; then
+            # [BUNDLE-4] 一次编译 4 个 an7581 机型，共享工具链/内核/软件包
+            sed -i '/CONFIG_TARGET_DEVICE_/d; /^CONFIG_TARGET_MULTI_PROFILE=/d' .config
+            {
+              echo "CONFIG_TARGET_MULTI_PROFILE=y"
+              for d in fiberhome_hg5382a fiberhome_hg5585f-ct fiberhome_hg5585f-cu nokia_xg-040g-md-ubi; do
+                echo "CONFIG_TARGET_DEVICE_airoha_an7581_DEVICE_${d}=y"
+                echo "CONFIG_TARGET_DEVICE_PACKAGES_airoha_an7581_DEVICE_${d}=\"\""
+              done
+            } >> .config
+            echo "已裁剪为 4 机型 bundle: hg5382a / hg5585f-ct / hg5585f-cu / 040g-md-ubi"
           else
             # 清掉所有设备选中项（含 is not set 行），再单独打开目标机型
             sed -i '/CONFIG_TARGET_DEVICE_/d; /^CONFIG_TARGET_MULTI_PROFILE=/d' .config
@@ -886,12 +914,15 @@ jobs:
           fi
 
           # 机型校验: 机型名写错时直接失败，避免静默全编译
-          if [ "${PROFILE}" != "all" ]; then
+          if [ "${PROFILE}" != "all" ] && [ "${PROFILE}" != "bundle-an7581-4" ]; then
             if ! grep -q "^CONFIG_TARGET_DEVICE_airoha_${SOC}_DEVICE_${PROFILE}=y" .config; then
               echo "::error::机型 ${PROFILE} 在 ${SOC} 下不存在，请检查 profile 名称"
               exit 1
             fi
             echo "机型校验通过: ${PROFILE}"
+          fi
+          if [ "${PROFILE}" = "bundle-an7581-4" ]; then
+            echo "批量模式校验通过: an7581 4 机型（设备列表在 Apply device profile 展开）"
           fi
 
           echo "CONFIG_TARGET_BOARD=$(grep '^CONFIG_TARGET_BOARD=' .config | cut -d'"' -f2)"
@@ -1429,7 +1460,7 @@ jobs:
       # 冒号会让 upload-artifact 整包失败；其余产物保持原名，刷机脚本/文档引用的名字不用动。
       - name: Stamp firmware filenames with build time
         id: stamp
-        if: steps.organize.outputs.status == 'success' && env.FW_TS_NAME == 'true'
+        if: steps.organize.outputs.status == 'success' && env.FW_TS_NAME == 'true' && env.PROFILE != 'bundle-an7581-4'
         run: |
           cd "$FIRMWARE"
 
