@@ -684,9 +684,11 @@ jobs:
             luci-app-mosdns luci-app-smartdns \
             luci-app-easytier easytier \
             luci-app-argon-config; do
-            # 删掉原来的 =y 行（含行尾注释），改成 is not set
-            sed -i "/^CONFIG_PACKAGE_${p}=y/d" .config
-            echo "CONFIG_PACKAGE_${p} is not set" >> .config
+            # 删掉原来的 =y 行（含行尾注释），改成标准的 "# ... is not set"。
+            # ⚠ 必须有行首 "# "：kconfig 只认这个语法；写成
+            #   "CONFIG_PACKAGE_x is not set"（无 #）会在 defconfig 报 missing separator。
+            sed -i "/^CONFIG_PACKAGE_${p}=y/d; /^# CONFIG_PACKAGE_${p} is not set/d" .config
+            echo "# CONFIG_PACKAGE_${p} is not set" >> .config
           done
           echo "✅ [DEFUSE] 已关闭未定制插件（保留 momo/tailscale/wireguard/upnp/wol/fluent/curl/nano/ttyd/rtp2httpd）"
 
